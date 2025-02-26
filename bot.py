@@ -27,6 +27,11 @@ async def on_ready():
     """Check if the bot is in the server and join the voice channel."""
     print(f"✅ Bot {bot.user} is online!")
 
+    await bot.change_presence(
+        status=discord.Status.dnd, 
+        activity=discord.Game("WORK IN PROGRESS")
+    )
+
     guild = bot.get_guild(GUILD_ID)
     if guild is None:
         print("⚠️ ERROR: The bot is NOT in the specified server!")
