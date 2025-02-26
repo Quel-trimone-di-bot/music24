@@ -51,15 +51,22 @@ async def join_and_stream():
                     voice_client = await voice_channel.connect(reconnect=True)
                     print(f"🎶 Connected to {voice_channel.name}")
 
-                    ffmpeg_options = {'options': '-vn'}
+                    ffmpeg_options = {
+                        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+                        'options': '-vn'
+                    }
                     audio_source = discord.FFmpegPCMAudio(RADIO_URL, **ffmpeg_options)
 
-                    # Debugging: Print if audio is playing
+                    # Debug: Print if audio starts playing
+                    print("▶️ Attempting to start audio playback...")
+                    voice_client.play(audio_source, after=lambda e: print(f"⚠️ Playback error: {e}") if e else None)
+
+                    await asyncio.sleep(3)  # Short delay to ensure playback starts
+
                     if voice_client.is_playing():
-                        print("🔊 Bot is already playing audio.")
+                        print("🔊 Audio playback started successfully!")
                     else:
-                        print("▶️ Starting the audio stream...")
-                        voice_client.play(audio_source, after=lambda e: print(f"⚠️ Playback error: {e}") if e else None)
+                        print("❌ Bot is NOT playing audio.")
 
                     while True:
                         await asyncio.sleep(5)  # Keep the bot alive
