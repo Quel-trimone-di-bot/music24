@@ -13,51 +13,60 @@ GUILD_ID = int(os.getenv("GUILD_ID"))
 VC_CHANNEL_ID = int(os.getenv("VC_CHANNEL_ID"))
 RADIO_URL = os.getenv("RADIO_URL", "https://radio.nicolairar.it/listen/nico/radio.mp3")
 
-# Enable all intents
+# Enable necessary intents
 intents = discord.Intents.default()
-intents.messages = True
 intents.guilds = True
-intents.voice_states = True  # Needed for voice channel events
-intents.members = True  # Important for privileged intent
+intents.voice_states = True
+intents.members = True
 
 # Create bot instance
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"✅ Bot {bot.user} is online and ready!")
+    """Check if the bot is in the server and join the voice channel."""
+    print(f"✅ Bot {bot.user} is online!")
+
+    guild = bot.get_guild(GUILD_ID)
+    if guild is None:
+        print("⚠️ ERROR: The bot is NOT in the specified server!")
+        return
+    
+    print(f"📡 Connected to server: {guild.name}")
+    
     await join_and_stream()
 
 async def join_and_stream():
     """Connects the bot to the voice channel and starts streaming."""
     while True:
         try:
-            guild = discord.utils.get(bot.guilds, id=GUILD_ID)
+            guild = bot.get_guild(GUILD_ID)
             if guild:
-                voice_channel = discord.utils.get(guild.voice_channels, id=VC_CHANNEL_ID)
+                voice_channel = guild.get_channel(VC_CHANNEL_ID)
                 if voice_channel:
+                    # Disconnect if already connected
+                    if bot.voice_clients:
+                        await bot.voice_clients[0].disconnect()
+
                     voice_client = await voice_channel.connect(reconnect=True)
                     print(f"🎶 Connected to {voice_channel.name}")
 
                     ffmpeg_options = {'options': '-vn'}
                     audio_source = discord.FFmpegPCMAudio(RADIO_URL, **ffmpeg_options)
 
+                    # Debugging: Print if audio is playing
+                    if voice_client.is_playing():
+                        print("🔊 Bot is already playing audio.")
+                    else:
+                        print("▶️ Starting the audio stream...")
+                        voice_client.play(audio_source, after=lambda e: print(f"⚠️ Playback error: {e}") if e else None)
+
                     while True:
-                        if not voice_client.is_playing():
-                            voice_client.play(audio_source)
-                        await asyncio.sleep(5)
+                        await asyncio.sleep(5)  # Keep the bot alive
 
         except Exception as e:
             print(f"⚠️ Streaming error: {e}")
             await asyncio.sleep(10)  # Wait before retrying
-
-@bot.event
-async def on_voice_state_update(member, before, after):
-    """Rejoins the voice channel if the bot is disconnected."""
-    if member == bot.user and before.channel and not after.channel:
-        print("🚨 Bot got disconnected! Attempting to reconnect...")
-        await asyncio.sleep(5)
-        await join_and_stream()
 
 @bot.command()
 async def stop(ctx):
