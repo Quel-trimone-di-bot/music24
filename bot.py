@@ -5,7 +5,7 @@ import os
 import ffmpeg
 from dotenv import load_dotenv
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -13,17 +13,23 @@ GUILD_ID = int(os.getenv("GUILD_ID"))
 VC_CHANNEL_ID = int(os.getenv("VC_CHANNEL_ID"))
 RADIO_URL = os.getenv("RADIO_URL", "https://radio.nicolairar.it/listen/nico/radio.mp3")
 
-# Bot setup
+# Enable all intents
 intents = discord.Intents.default()
+intents.messages = True
+intents.guilds = True
+intents.voice_states = True  # Needed for voice channel events
+intents.members = True  # Important for privileged intent
+
+# Create bot instance
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"✅ Bot {bot.user} is online!")
+    print(f"✅ Bot {bot.user} is online and ready!")
     await join_and_stream()
 
 async def join_and_stream():
-    """Connects the bot to the voice channel and starts streaming the radio."""
+    """Connects the bot to the voice channel and starts streaming."""
     while True:
         try:
             guild = discord.utils.get(bot.guilds, id=GUILD_ID)
@@ -55,7 +61,7 @@ async def on_voice_state_update(member, before, after):
 
 @bot.command()
 async def stop(ctx):
-    """Stops the stream and disconnects the bot from the voice channel."""
+    """Stops the stream and disconnects the bot."""
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
         await ctx.send("🛑 Bot has disconnected from the voice channel.")
